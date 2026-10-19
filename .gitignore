@@ -1,0 +1,19 @@
+build*/
+logs/
+*.log
+
+# ── 模型大二进制: 体积大/可再生, 本地快照不入库 (磁盘文件原样保留) ──
+# 需要纳入版本时用 git add -f 强制指定具体文件
+*.rknn
+*.onnx
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.tar
+
+# 解压/中间产物
+models/*.rknn
+
+# 取证/压测产物
+forensics-*/

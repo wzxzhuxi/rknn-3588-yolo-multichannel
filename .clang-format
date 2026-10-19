@@ -1,0 +1,16 @@
+---
+# 基线：LLVM；针对本仓库既有风格微调（全大写 RP 只在改动文件上跑，勿全仓格式化）
+BasedOnStyle: LLVM
+Language: Cpp
+Standard: c++17
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ColumnLimit: 120
+PointerAlignment: Left
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortCaseLabelsOnASingleLine: true
+IndentCaseLabels: true
+SpacesBeforeTrailingComments: 2
+# 仓库的 include 分组是手工排的（std / sys / 项目头），不自动重排
+SortIncludes: false

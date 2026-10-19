@@ -1,0 +1,20 @@
+---
+# rknn-3588-yolo-multichannel: 只对新改动/新代码跑；跨编译产物在 build-cross/compile_commands.json
+# 用法: clang-tidy -p build-cross <file.cpp> --quiet
+# 只检查本仓库自己的头文件，忽略 librknn_api/3rdparty 里的 SDK 头
+HeaderFilterRegex: '.*/(components|src|config)/.*'
+
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-implicit-widening-of-multiplication-result,
+  -bugprone-narrowing-conversions,
+  performance-*,
+  -performance-avoid-endl,
+  -performance-enum-size,
+  modernize-use-nullptr,
+  modernize-use-override,
+  misc-unused-using-decls
+
+WarningsAsErrors: ''
