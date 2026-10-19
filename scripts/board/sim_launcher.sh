@@ -6,8 +6,8 @@
 set -u
 N=${1:-10}
 BASE=${2:-8554}
-VIDEO=${3:-/userdata/rknn-3588-yolo-multichannel/720p60hz.h264}
 RUN=${4:-/userdata/rknn-3588-yolo-multichannel}
+VIDEO=${3:-${RUN}/sample_pedestrians.h264}
 SERVER_DIR=/userdata/rknn_yolov8_multi_rtsp_demo
 
 export LD_LIBRARY_PATH=${SERVER_DIR}/lib:${RUN}/lib
