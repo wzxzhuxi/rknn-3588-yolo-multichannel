@@ -14,6 +14,10 @@ Multi-channel RTSP person detection on RK3588 (ATK-DLRK3588, 16 GB, kernel 6.12.
 - Per-channel capture/engine threads + shared NPU worker pool; frames are dropped under backpressure, never pushed back to RTSP
 - No MQTT, face models, or Python runtime required
 
+## Project statement
+
+A multi-channel RTSP YOLOv5s inference project on RK3588, supporting arbitrary numbers of concurrent video streams (current config validation limit: 128). Each channel captures and decodes independently while sharing an NPU worker pool. When inference capacity is exceeded, frames are dropped by design instead of applying backpressure to the video source. The inference rate achievable per channel decreases as concurrency grows.
+
 ## Layout
 
 ```
@@ -123,19 +127,28 @@ channel.cam1.stream_url=rtsp://127.0.0.1:8555/live/1
 - Local snapshots: `keep_source_bgr=true` + `enable_snapshot=true`; files go to `snapshot_dir` (default `snapshots/`)
 - Environment variables override config, e.g. `CHANNELS_LIST`, `TARGET_FPS`, `CONF_THRES`, `YOLO_CORE_MASK`
 
-## Performance reference
+## Concurrency performance
 
-Test setup: 720p H.264, `target_fps=10`, `npu_workers=12`, `yolo_core_mask=rotate`.
+Test setup: RK3588, 720p H.264, `target_fps=10`, `npu_workers=12`, `yolo_core_mask=rotate`, about 30 s per point. `Inference fps` means frames actually completed through YOLOv5, not frames read from RTSP.
 
-- 10 channels: ~100 read fps, ~100 inference fps, every channel can process 10 fps
-- 30 channels: ~300 read fps, ~136 inference fps, ~4.5 inference fps per channel
-- 100 channels (one RTSP server / 100 clients): ~304 read fps, ~135 inference fps, app RSS ~5.6 GB, stable
-- 16 channels × 25 fps: ~400 read fps (25 fps per channel achieved), ~147 inference fps (~9.2 fps per channel), app RSS ~273 MB
-- YOLOv5s inference takes ~75–82 ms per frame; inference throughput is NPU-bound. The ~300 read-fps plateau comes from the source/pipeline side, not from MPP decode (pure 720p decode is far faster)
+| Channels | Read fps/ch | Total read fps | Inference fps | Inference fps/ch | NPU avg | App RSS | System memory |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 10.2 | 10.2 | 10.2 | 10.2 | 28.6 ms* | 252 MB | 5.9% |
+| 10 | 9.7 | 97.4 | 99.8 | 10.0 | 55.0 ms | 264 MB | 14.3% |
+| 20 | 9.8 | 196.4 | 144.2 | 7.2 | 76.8 ms | 277 MB | 23.6% |
+| 30 | 9.8 | 294.8 | 136.0 | 4.5 | 81.1 ms | 292 MB | 32.8% |
+| 40 | 7.8 | 313.2 | 134.4 | 3.4 | 82.3 ms | 399 MB | 44.0% |
+| 50 | 6.1 | 305.6 | 134.2 | 2.7 | 82.4 ms | 499 MB | 53.9% |
+| 60 | 5.1 | 308.6 | 133.6 | 2.2 | 82.5 ms | 606 MB | 63.6% |
+| 70 | 4.4 | 308.0 | 133.2 | 1.9 | 82.8 ms | 785 MB | 74.1% |
+| 80 | 3.8 | 300.2 | 133.2 | 1.7 | 83.0 ms | 914 MB | 84.3% |
+| 90 | 3.3 | 299.6 | 132.8 | 1.5 | 83.1 ms | 1019 MB | 94.3% |
+| 100** | 3.1 | 311.6 | 134.4 | 1.3 | 82.0 ms | 5.6 GB | 58.1% |
 
-The performance table uses 720p H.264; the bundled sample video is a 1080p pedestrian scene and is intended for functional smoke tests, not as a performance baseline.
+\* The 1-channel NPU average includes startup warm-up; steady state is about 16 ms.  
+\** Channels 1–90 use one RTSP server per channel, so system memory includes simulator overhead. The 100-channel point uses one server with 100 clients to avoid OOM from 100 simulator processes, which is why 90 channels reports higher system memory than 100.
 
-For multi-channel load tests, use **one RTSP server with multiple clients**. Each `rtsp_file_server` process uses ~122 MB RSS; 100 processes cause OOM and do not represent the application limit.
+Additional: the 16 × 25 fps config measured ~400 read fps (25 fps per channel), ~147 inference fps (~9.2 fps per channel), and ~273 MB app RSS. The ~300 read-fps plateau is a source/pipeline-side limit; pure 720p MPP decode is about 1870 fps.
 
 ## Board notes
 
